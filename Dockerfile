@@ -10,7 +10,7 @@ RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 
 COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/home/node/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --prod
+  pnpm install --frozen-lockfile
 
 FROM node:lts-alpine AS builder
 
