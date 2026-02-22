@@ -1,4 +1,4 @@
-FROM node:lts-alpine
+FROM node:lts-alpine AS builder
 
 RUN apk add --no-cache tini
 
@@ -7,9 +7,23 @@ USER node
 
 WORKDIR /app
 
-COPY --chown=node:node . ./
+RUN npm install -g pnpm@8.15.9
 
-RUN yarn --network-timeout=100000
+ADD ./package.json /app/package.json
+ADD ./pnpm-lock.yaml /app/pnpm-lock.yaml
+ADD ./.npmrc /app/.npmrc
+
+RUN pnpm install --frozen-lockfile
+
+ADD ./ /app
+
+FROM node:lts-alpine
+
+ENV TZ=Asia/Shanghai
+
+WORKDIR /app
+
+COPY --from=builder /app ./
 
 EXPOSE 3000
 
