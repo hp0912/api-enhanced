@@ -2,9 +2,9 @@ name: Publish Docker image
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
-  workflow_dispatch:
+    branches: [main1]
+    # tags: ['v*']
+  # workflow_dispatch:
 
 permissions:
   contents: read
