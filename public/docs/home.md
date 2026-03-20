@@ -783,7 +783,7 @@ tags: 歌单标签
 **必选参数 :** `uid` : 用户 id
 
 **可选参数 :**
-`limit` : 返回数量 , 默认为 30
+`limit` : 返回数量 , 默认为 20
 
 `offset` : 偏移数量，用于分页 ,如 :( 页数 -1)\*30, 其中 30 为 limit 的值 , 默认为 0
 
@@ -1254,6 +1254,21 @@ tags: 歌单标签
 
 说明：`杜比全景声`音质需要设备支持，不同的设备可能会返回不同码率的 url。cookie 需要传入`os=pc`保证返回正常码率的 url。
 
+### 302到音乐 url - 新版
+
+说明 : 只允许传入单个`id`，会使用302重定向请求到目标url
+
+**必选参数 :** `id` : 音乐 id
+`level`: 播放音质等级, 分为 `standard` => `标准`,`higher` => `较高`, `exhigh`=>`极高`,
+`lossless`=>`无损`, `hires`=>`Hi-Res`, `jyeffect` => `高清环绕声`, `sky` => `沉浸环绕声`, `dolby` => `杜比全景声`, `jymaster` => `超清母带`
+`unblock`: 是否使用使用歌曲解锁, 分为`true`和`false`
+
+**接口地址 :** `/song/url/v1/302`
+
+**调用例子 :** `/song/url/v1/302?id=1969519579&level=exhigh`
+
+说明：`杜比全景声`音质需要设备支持，不同的设备可能会返回不同码率的 url。cookie 需要传入`os=pc`保证返回正常码率的 url。
+
 ### 音乐是否可用
 
 说明: 调用此接口,传入歌曲 id, 可获取音乐是否可用,返回 `{ success: true, message: 'ok' }` 或者 `{ success: false, message: '亲爱的,暂无版权' }`
@@ -1685,6 +1700,62 @@ tags: 歌单标签
 **接口地址 :** `/comment/video`
 
 **调用例子 :** `/comment/video?id=89ADDE33C0AAE8EC14B99F6750DB954D`
+
+### 评论统计数据
+
+说明 : 调用此接口 , 传入资源类型和资源 id 列表 , 可批量获取对应资源的评论统计数据 ( 不需要登录 )
+
+**必选参数 :**
+
+`type`: 数字 , 资源类型 , 对应以下类型
+
+```
+0: 歌曲
+
+1: mv
+
+2: 歌单
+
+3: 专辑
+
+4: 电台节目
+
+5: 视频
+
+6: 动态
+
+7: 电台
+```
+
+`ids`: 资源 id 列表 , 多个 id 用逗号分隔 , 如 `186016,347230`
+
+**接口地址 :** `/comment/info/list`
+
+**调用例子 :** `/comment/info/list?type=0&ids=186016,347230`
+
+**返回数据 :**
+
+```json
+{
+  "data": [
+    {
+      "latestLikedUsers": null,
+      "liked": false,
+      "comments": null,
+      "resourceType": 4,
+      "resourceId": 186016,
+      "commentUpgraded": false,
+      "musicianSaidCount": 0,
+      "commentCountDesc": "100w+",
+      "likedCount": 347,
+      "commentCount": 1970844,
+      "shareCount": 109721,
+      "threadId": "R_SO_4_186016"
+    }
+  ],
+  "code": 200
+}
+```
 
 ### 热门评论
 
@@ -2783,12 +2854,14 @@ type : 地区
 **1. 后端代理模式 (默认)**
 
 文件通过服务器转发到云存储,调用简单,但受服务器限制:
+
 - Vercel Serverless Functions 限制请求体大小为 4.5MB
 - 自建服务器需配置足够大的请求体限制
 
 **2. 客户端直传模式 (推荐用于 Vercel)**
 
 文件直接从客户端上传到云存储服务器,绕过服务器限制:
+
 - 支持大文件上传
 - 适合 Vercel、Netlify 等有请求体限制的平台
 - 需要前端配合实现
@@ -2800,12 +2873,14 @@ type : 地区
 **接口地址 :** `/cloud/upload/token`
 
 **必选参数 :**
+
 - `cookie`: 网易云音乐 Cookie (在请求体中传递)
 - `md5`: 文件 MD5 值
 - `fileSize`: 文件大小(字节)
 - `filename`: 文件名
 
 **返回数据 :**
+
 ```json
 {
   "code": 200,
@@ -2824,6 +2899,7 @@ type : 地区
 **接口地址 :** `/cloud/upload/complete`
 
 **必选参数 :**
+
 - `cookie`: 网易云音乐 Cookie (在请求体中传递)
 - `songId`: 歌曲 ID
 - `resourceId`: 资源 ID
@@ -2831,6 +2907,7 @@ type : 地区
 - `filename`: 文件名
 
 **可选参数 :**
+
 - `song`: 歌曲名
 - `artist`: 艺术家
 - `album`: 专辑名
@@ -2858,6 +2935,7 @@ type : 地区
 **调用例子 :** `/cloud/match?uid=32953014&sid=aaa&asid=bbb` `/cloud/match?uid=32953014&sid=bbb&asid=0`
 
 ### 获取云盘歌词
+
 说明: 调用此接口, 获取云盘歌曲的歌词，歌词来自此文件的音乐元数据`LYRICS`标签。
 
 **可选参数 :**
@@ -4040,13 +4118,15 @@ type='1009' 获取其 id, 如`/search?keywords= 代码时间 &type=1009`
 
 **接口地址:** `/voicelist/search`
 
+**必选参数：**
+
+`keyword`: 搜索关键词
+
 **可选参数：**
 
-`limit`: 取出歌单数量 , 默认为 200
+`limit`: 取出歌单数量, 默认为 10
 
-`offset`: 偏移数量 , 用于分页 , 如 :( 评论页数 -1)\*200, 其中 200 为 limit 的值
-
-`podcastName`: 播客名称
+`offset`: 偏移数量 , 用于分页 , 默认为 30
 
 ### 播客声音列表
 
@@ -4951,12 +5031,11 @@ let data = encodeURIComponent(
 
 **调用例子:** `/vip/sign/info`
 
-
 ### 用户的创建歌单列表
 
 说明 : 调用此接口, 传入用户id, 获取用户的创建歌单列表
 
-**必选参数 :**  
+**必选参数 :**
 
 `uid`: 用户 id
 
@@ -4974,7 +5053,7 @@ let data = encodeURIComponent(
 
 说明 : 调用此接口, 传入用户id, 获取用户的收藏歌单列表
 
-**必选参数 :**  
+**必选参数 :**
 
 `uid`: 用户 id
 
@@ -4987,6 +5066,82 @@ let data = encodeURIComponent(
 **接口地址 :** `/user/playlist/collect`
 
 **调用例子 :** `/user/playlist/collect?uid=32953014`
+
+### 搜索建议 - PC端
+
+说明 : 调用此接口, 传入搜索关键词, 获取搜索建议
+
+**必选参数 :**
+
+`keyword`: 搜索关键词
+
+**接口地址 :** `/search/suggest/pc`
+
+**调用例子 :** `/search/suggest/pc?keyword=海阔天空`
+
+### 喜欢歌曲 - 新版
+
+说明 : 登录后调用此接口, 传入歌曲 id 用户id和喜欢状态, 可喜欢/取消喜欢歌曲
+
+**必选参数 :**
+
+`id`: 歌曲 id
+`uid`: 用户 id
+`like`: 喜欢状态, true 表示喜欢, false 表示取消喜欢
+
+**接口地址 :** `/song/like`
+
+**调用例子 :** `/song/like?id=2058263032&uid=32953014&like=true`
+
+### 我创建的播客声音
+
+说明 : 登录后调用此接口, 获取我创建的博客声音
+
+**可选参数 :** 
+
+`limit` : 返回数量 , 默认为 20
+
+**接口地址 :** `/voicelist/my/created`
+
+**调用例子 :** `/voicelist/my/created`
+
+### 发布评论
+
+说明 : 登录后调用此接口, 传入评论线程 id, 评论内容等信息, 发布评论
+
+**必选参数 :**
+
+`id`: 歌曲id
+`content`: 评论内容
+
+**接口地址 :** `/comment/add`
+
+**调用例子 :** `/comment/add?id=2058263032&content=这首歌太棒了！`
+
+### 删除评论
+
+说明 : 登录后调用此接口, 传入评论 id, 删除评论
+
+**必选参数 :**
+`cid`: 评论 id
+`id`: 歌曲id
+
+**接口地址 :** `/comment/delete`
+
+**调用例子 :** `/comment/delete?threadId=2058263032&commentId=123456789`
+
+### 回复评论
+
+说明 : 登录后调用此接口, 传入歌曲 id, 回复内容等信息, 回复评论
+
+**必选参数 :**
+`id`: 歌曲id
+`commentId`: 被回复的评论 id
+`content`: 回复内容
+
+**接口地址 :** `/comment/reply`
+
+**调用例子 :** `/comment/reply?id=2058263032&commentId=123456789&content=我也觉得这首歌很棒！`
 
 ## 离线访问此文档
 
