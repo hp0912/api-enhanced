@@ -303,8 +303,13 @@ async function constructServer(moduleDefs) {
           // 参数注入客户端IP
           const obj = [...params]
           const options = obj[2] || {}
-          if (!options.randomCNIP) {
-            let ip = req.ip
+          let ip = ''
+          
+          if (options.randomCNIP) {
+            ip = global.cnIp
+            // logger.info('Using random Chinese IP for request:', ip)
+          } else {
+            ip = req.ip
 
             if (ip.substring(0, 7) == '::ffff:') {
               ip = ip.substring(7)
@@ -313,10 +318,11 @@ async function constructServer(moduleDefs) {
               ip = global.cnIp
             }
             // logger.info('Requested from ip:', ip)
-            obj[2] = {
-              ...options,
-              ip,
-            }
+          }
+          
+          obj[2] = {
+            ...options,
+            ip,
           }
 
           return request(...obj)

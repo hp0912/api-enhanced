@@ -2,6 +2,7 @@
 const encrypt = require('./crypto')
 const CryptoJS = require('crypto-js')
 const { default: axios } = require('axios')
+const logger = require('./logger')
 const { PacProxyAgent } = require('pac-proxy-agent')
 const http = require('http')
 const https = require('https')
@@ -23,6 +24,20 @@ const anonymous_token = fs.readFileSync(
   path.resolve(tmpPath, './anonymous_token'),
   'utf-8',
 )
+const xeapiPublicKeyPath = path.resolve(tmpPath, './xeapi_public_key')
+let xeapi_public_key = null
+const loadXeapiPublicKey = () => {
+  if (!xeapi_public_key && fs.existsSync(xeapiPublicKeyPath)) {
+    try {
+      xeapi_public_key = JSON.parse(
+        fs.readFileSync(xeapiPublicKeyPath, 'utf-8'),
+      )
+    } catch (error) {
+      console.log('[ERR]', error)
+    }
+  }
+  return xeapi_public_key
+}
 
 // 预先绑定常用函数和常量
 const floor = Math.floor
@@ -95,8 +110,12 @@ const userAgentMap = {
 // 预先定义常量
 const DOMAIN = APP_CONF.domain
 const API_DOMAIN = APP_CONF.apiDomain
+const XEAPI_DOMAIN = 'https://interface3.music.163.com'
 const ENCRYPT_RESPONSE = APP_CONF.encryptResponse
 const SPECIAL_STATUS_CODES = new Set([201, 302, 400, 502, 800, 801, 802, 803])
+
+let xeapiSessionId = ''
+let xeapiSessionKey = ''
 
 // chooseUserAgent函数
 const chooseUserAgent = (crypto, uaType = 'pc') => {
@@ -216,6 +235,52 @@ const createRequest = (uri, data, options) => {
         url = (options.domain || DOMAIN) + '/api/linux/forward'
         break
 
+      case 'xeapi':
+        const xeapiPublicKey = loadXeapiPublicKey()
+        if (!xeapiPublicKey) {
+          throw new Error('xeapi public key is missing')
+        }
+        const xeapiOs = cookie.os === 'android' ? cookie.os : 'android'
+        const xeapiAppver =
+          cookie.os === 'android' && cookie.appver ? cookie.appver : '9.1.65'
+        const xeapiOsver =
+          cookie.os === 'android' && cookie.osver ? cookie.osver : '16'
+        const xeapiBuildver = cookie.buildver || now().toString().substr(0, 10)
+        headers['User-Agent'] = options.ua || chooseUserAgent('api', 'android')
+        headers['X-Client-Enc-State'] = 'ENCRYPTED'
+        headers['x-aeapi'] = true
+        headers['content-type'] =
+          'application/x-www-form-urlencoded;charset=utf-8'
+        headers['x-deviceid'] = cookie.deviceId
+        headers['x-os'] = xeapiOs
+        headers['x-osver'] = xeapiOsver
+        headers['x-appver'] = xeapiAppver
+        headers['x-sdeviceid'] = cookie.sDeviceId || cookie.deviceId
+        headers['x-buildver'] = xeapiBuildver
+        if (cookie.MUSIC_U) headers['x-music-u'] = cookie.MUSIC_U
+        const xeapiCookie = {
+          ...cookie,
+          os: xeapiOs,
+          osver: xeapiOsver,
+          appver: xeapiAppver,
+          buildver: xeapiBuildver,
+          deviceId: cookie.deviceId,
+          sDeviceId: cookie.sDeviceId || cookie.deviceId,
+        }
+        headers['Cookie'] = cookieObjToString(xeapiCookie)
+        url = (options.domain || XEAPI_DOMAIN) + '/xeapi/' + uri.substr(5)
+        encryptData = encrypt.xeapi(uri, data, {
+          ...options,
+          publicKeyState: xeapiPublicKey,
+          sessionId: xeapiSessionId,
+          sessionKey: xeapiSessionKey,
+          appver: xeapiAppver,
+          deviceId: cookie.deviceId,
+          os: xeapiOs,
+          uid: cookie.uid || cookie.userId || '',
+        })
+        break
+
       case 'eapi':
       case 'api':
         // header创建
@@ -259,7 +324,6 @@ const createRequest = (uri, data, options) => {
         console.log('[ERR]', 'Unknown Crypto:', crypto)
         break
     }
-    // console.log(url);
     // settings创建
     let settings = {
       method: 'POST',
@@ -272,7 +336,8 @@ const createRequest = (uri, data, options) => {
 
     // 使用返回值加密
     const use_e_r = (crypto === 'eapi' || crypto === 'weapi') && data.e_r
-    if (use_e_r) {
+    const use_xeapi = crypto === 'xeapi'
+    if (use_e_r || use_xeapi) {
       settings.encoding = null
       settings.responseType = 'arraybuffer'
     }
@@ -319,8 +384,25 @@ const createRequest = (uri, data, options) => {
           x.replace(/\s*Domain=[^(;|$)]+;*/, ''),
         )
 
+        // debug: 统一注释块，需要时取消注释查看请求/返回的原始密文
+
+        // logger.debug(`[${crypto}]`, uri)
+        // logger.debug(`[${crypto}] encrypted data:`, JSON.stringify(encryptData))
+        // logger.debug(
+        //   `[RAW] [${crypto}]`,
+        //   use_xeapi
+        //     ? Buffer.from(body).toString('base64')
+        //     : body.toString('hex').toUpperCase(),
+        // )
+
         try {
-          if (use_e_r) {
+          if (use_xeapi) {
+            if (res.headers['x-encr-ssid'] && res.headers['x-encr-sskey']) {
+              xeapiSessionId = res.headers['x-encr-ssid']
+              xeapiSessionKey = res.headers['x-encr-sskey']
+            }
+            answer.body = encrypt.xeapiResDecrypt(Buffer.from(body))
+          } else if (use_e_r) {
             answer.body = encrypt.eapiResDecrypt(
               body.toString('hex').toUpperCase(),
               headers['x-aeapi'],
