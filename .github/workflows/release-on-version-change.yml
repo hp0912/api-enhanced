@@ -136,7 +136,7 @@ jobs:
           esac
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.platform }}-binary
           path: release-artifacts/*
@@ -165,17 +165,16 @@ jobs:
           fetch-tags: true
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-artifacts
+          merge-multiple: true
 
-      - name: Flatten artifacts
+      - name: List flattened artifacts
         shell: bash
         run: |
           mkdir -p final-artifacts
-
-          find release-artifacts -type f -exec cp {} final-artifacts/ \;
-
+          cp release-artifacts/* final-artifacts/
           ls -lah final-artifacts
 
       - name: Generate release notes
@@ -261,13 +260,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

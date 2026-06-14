@@ -1,3 +1,5 @@
+// 获取游客cookie
+
 const CryptoJS = require('crypto-js')
 const path = require('path')
 const fs = require('fs')
@@ -24,7 +26,6 @@ function cloudmusic_dll_encode_id(some_id) {
 
 module.exports = async (query, request) => {
   const deviceId = generateDeviceId()
-  logger.info(`Successfully registered anonimous token, deviceId: ${deviceId}`)
   global.deviceId = deviceId
   const encodedId = CryptoJS.enc.Base64.stringify(
     CryptoJS.enc.Utf8.parse(
@@ -37,7 +38,7 @@ module.exports = async (query, request) => {
   let result = await request(
     `/api/register/anonimous`,
     data,
-    createOption(query, 'weapi'),
+    createOption(query, 'xeapi'),
   )
   if (result.body.code === 200) {
     result = {
