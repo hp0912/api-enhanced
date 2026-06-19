@@ -9,6 +9,8 @@
     "lint": "eslint \"**/*.{js,ts}\"",
     "lint-fix": "eslint --fix \"**/*.{js,ts}\"",
     "prepare": "husky install",
+    "docs:format": "node scripts/format-docs.js",
+    "docs:check": "node scripts/format-docs.js --check",
     "pkgwin": "pkg . -t node18-win-x64 -C GZip -o precompiled/app",
     "pkglinux": "pkg . -t node18-linux-x64 -C GZip -o precompiled/app",
     "pkgmacos": "pkg . -t node18-macos-x64 -C GZip -o precompiled/app"
